@@ -15,6 +15,11 @@ using namespace mavsdk;
 using namespace std::this_thread;
 using namespace std::chrono;
 
+#include <mavsdk/plugins/mission/mission.h>
+#include <future>
+using namespace mavsdk;
+#include <mavsdk/plugins/offboard/offboard.h>
+
 #define ERROR_CONSOLE_TEXT "\033[31m" // Turn text on console red
 #define TELEMETRY_CONSOLE_TEXT "\033[34m" // Turn text on console blue
 #define NORMAL_CONSOLE_TEXT "\033[0m" // Restore normal console colour
@@ -33,6 +38,39 @@ void component_discovered(ComponentType component_type)
 {
     std::cout << NORMAL_CONSOLE_TEXT << "Discovered a component with type "
               << unsigned(component_type) << std::endl;
+}
+
+bool offboard_ctrl_body1(std::shared_ptr<mavsdk::Offboard> offboard)
+{
+    Offboard::Attitude control_stick{}; // Send once before starting offboard
+    offboard->set_attitude(control_stick);
+    Offboard::Result offboard_result = offboard->start();
+    if (offboard_result != Offboard::Result::Success) {
+        return 1;
+    } // Failed
+    control_stick.roll_deg = 30.0f;
+    control_stick.thrust_value = 0.6f;
+    offboard->set_attitude(control_stick);
+    std::this_thread::sleep_for(std::chrono::seconds(5));
+    offboard_result = offboard->stop(); // Send it once before ending offboard
+    return true;
+}
+
+// vehicle rotate 2
+bool offboard_ctrl_body2(std::shared_ptr<mavsdk::Offboard> offboard)
+{
+    Offboard::VelocityBodyYawspeed control_stick{}; // before starting offboard
+    offboard->set_velocity_body(control_stick);
+    Offboard::Result offboard_result = offboard->start();
+    if (offboard_result != Offboard::Result::Success) {
+        return 1;
+    } // Failed
+    control_stick.down_m_s = 0.0f;
+    control_stick.yawspeed_deg_s = 90.0f;
+    offboard->set_velocity_body(control_stick);
+    std::this_thread::sleep_for(std::chrono::seconds(5));
+    offboard_result = offboard->stop(); // Send it once before ending offboard
+    return true;
 }
 
 int main(int argc, char** argv)
@@ -126,8 +164,20 @@ int main(int argc, char** argv)
         return 1;
     }
 
+    // std::this_thread::sleep_for(std::chrono::seconds(5));
+    sleep_for(seconds(3));
+    auto offboard = std::make_shared<Offboard>(system);
+
+    bool ret1 = offboard_ctrl_body1(offboard);
+    if (ret1 == false) {
+        return 1;
+    }
+    bool ret2 = offboard_ctrl_body2(offboard);
+    if (ret2 == false) {
+        return 1;
+    }
     // Let it hover for a bit before landing again.
-    sleep_for(seconds(10));
+    sleep_for(seconds(3));
 
     std::cout << "Landing..." << std::endl;
     const Action::Result land_result = action->land();

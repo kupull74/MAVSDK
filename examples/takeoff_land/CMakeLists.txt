@@ -21,4 +21,6 @@ target_link_libraries(takeoff_and_land
     MAVSDK::mavsdk_telemetry
     MAVSDK::mavsdk_action
     MAVSDK::mavsdk
+    MAVSDK::mavsdk_mission
+    MAVSDK::mavsdk_offboard
 )
